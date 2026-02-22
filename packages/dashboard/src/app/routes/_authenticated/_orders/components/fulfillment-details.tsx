@@ -33,7 +33,7 @@ export function FulfillmentDetails({ order, fulfillment, onSuccess }: Readonly<F
     const { getTranslatedFulfillmentState } = useDynamicTranslations();
     const customFieldConfig = useCustomFieldConfig('Fulfillment');
     const customFieldsForm = useForm({
-        defaultValues: {
+        values: {
             customFields: (fulfillment as any).customFields ?? {},
         },
     });
