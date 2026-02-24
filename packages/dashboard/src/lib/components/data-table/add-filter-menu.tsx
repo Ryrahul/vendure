@@ -48,7 +48,7 @@ export function AddFilterMenu({ columns }: Readonly<AddFilterMenuProps>) {
                                 setIsDialogOpen(true);
                             }}
                         >
-                            {getTranslatedFieldName(column.id)}
+                            {(column.columnDef.meta as any)?.filterLabel ?? getTranslatedFieldName(column.id)}
                         </DropdownMenuItem>
                     ))}
                 </DropdownMenuContent>

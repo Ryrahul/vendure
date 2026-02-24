@@ -1,3 +1,7 @@
+import {
+    DataTableFacetValueFilter,
+    useFacetValueFilterBadgeFormatter,
+} from '@/vdb/components/data-table/filters/data-table-facet-value-filter.js';
 import { DetailPageButton } from '@/vdb/components/shared/detail-page-button.js';
 import { PermissionGuard } from '@/vdb/components/shared/permission-guard.js';
 import { RichTextDescriptionCell } from '@/vdb/components/shared/table-cell/order-table-cell-components.js';
@@ -26,6 +30,7 @@ export const Route = createFileRoute('/_authenticated/_products/products')({
 
 function ProductListPage() {
     const { t } = useLingui();
+    const formatFacetValues = useFacetValueFilterBadgeFormatter();
     const reindexMutation = useMutation({
         mutationFn: () => api.mutate(reindexDocument, {}),
         onSuccess: () => {
@@ -61,6 +66,20 @@ function ProductListPage() {
                           sku: { contains: searchTerm },
                       }
                     : {};
+            }}
+            additionalColumns={{
+                facetValueId: {
+                    header: '',
+                    cell: () => null,
+                    enableSorting: false,
+                    enableHiding: false,
+                    enableColumnFilter: true,
+                    meta: {
+                        filterLabel: t`Facet values`,
+                        customFilterComponent: DataTableFacetValueFilter,
+                        formatFilterValue: formatFacetValues,
+                    },
+                },
             }}
             transformVariables={variables => {
                 return {

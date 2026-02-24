@@ -1,6 +1,6 @@
 import { Dialog } from '@/vdb/components/ui/dialog.js';
 import { Column } from '@tanstack/react-table';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { DataTableFilterBadge } from './data-table-filter-badge.js';
 import { DataTableFilterDialog } from './data-table-filter-dialog.js';
 import { ColumnDataType } from './types.js';
@@ -19,6 +19,9 @@ export function DataTableFilterBadgeEditable({
     currencyCode: string;
 }) {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const meta = column?.columnDef.meta as any;
+    const filterLabel = meta?.filterLabel as string | undefined;
+    const formatFilterValue = meta?.formatFilterValue as ((value: unknown) => React.ReactNode) | undefined;
 
     return (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -28,6 +31,8 @@ export function DataTableFilterBadgeEditable({
                 onClick={() => setIsDialogOpen(true)}
                 dataType={dataType}
                 currencyCode={currencyCode}
+                filterLabel={filterLabel}
+                formatFilterValue={formatFilterValue}
             />
             {column && <DataTableFilterDialog column={column} onEnter={() => setIsDialogOpen(false)} />}
         </Dialog>

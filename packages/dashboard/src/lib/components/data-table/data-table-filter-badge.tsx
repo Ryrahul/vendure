@@ -1,5 +1,6 @@
 import { useLocalFormat } from '@/vdb/hooks/use-local-format.js';
 import { Filter, XIcon } from 'lucide-react';
+import React from 'react';
 import { Badge } from '../ui/badge.js';
 import { HumanReadableOperator, Operator } from './human-readable-operator.js';
 import { ColumnDataType } from './types.js';
@@ -10,14 +11,19 @@ export function DataTableFilterBadge({
     onClick,
     dataType,
     currencyCode,
+    filterLabel,
+    formatFilterValue,
 }: {
     filter: any;
     onRemove: (filter: any) => void;
     onClick?: (filter: any) => void;
     dataType: ColumnDataType;
+    filterLabel?: string;
+    formatFilterValue?: (value: unknown) => React.ReactNode;
     currencyCode: string;
 }) {
     const [operator, value] = Object.entries(filter.value as Record<string, unknown>)[0];
+    const displayLabel = filterLabel ?? filter.id;
     return (
         <Badge key={filter.id} className="flex gap-2 flex-wrap items-center" variant="outline">
             <button
@@ -27,15 +33,19 @@ export function DataTableFilterBadge({
                 <Filter size="12" className="opacity-50 flex-shrink-0" />
                 <div
                     className="@xs:overflow-hidden @xs:text-ellipsis @xs:whitespace-nowrap"
-                    title={filter.id}
+                    title={displayLabel}
                 >
-                    {filter.id}
+                    {displayLabel}
                 </div>
                 <div className="text-muted-foreground flex-shrink-0">
                     <HumanReadableOperator operator={operator as Operator} mode="short" />
                 </div>
                 <div className="@xs:overflow-hidden @xs:text-ellipsis @xs:whitespace-nowrap flex flex-col @xl:flex-row @2xl:gap-1">
-                    <FilterValue value={value} dataType={dataType} currencyCode={currencyCode} />
+                    {formatFilterValue ? (
+                        formatFilterValue(value)
+                    ) : (
+                        <FilterValue value={value} dataType={dataType} currencyCode={currencyCode} />
+                    )}
                 </div>
             </button>
             <button className="border-l -mr-2" onClick={() => onRemove(filter)}>
