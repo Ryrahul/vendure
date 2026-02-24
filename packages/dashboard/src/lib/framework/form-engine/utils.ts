@@ -28,48 +28,61 @@ import { FieldInfo } from '../document-introspection/get-document-structure.js';
  * Transforms relation fields in an entity, extracting IDs from relation objects.
  * This is primarily used for custom fields of type "ID".
  *
- * @param fields - Array of field information
+ * Walks the `fields` tree recursively so that `customFields` are processed
+ * regardless of nesting depth (e.g. both `{ customFields }` and
+ * `{ input: { customFields } }` are handled correctly).
+ *
+ * @param fields - Array of field information describing the expected structure
  * @param entity - The entity to transform
  * @returns A new entity with transformed relation fields
  */
 export function transformRelationFields<E extends Record<string, any>>(fields: FieldInfo[], entity: E): E {
     // Create a shallow copy to avoid mutating the original entity
-    const processedEntity = { ...entity, customFields: { ...(entity.customFields ?? {}) } };
+    const processedEntity = { ...entity };
 
-    // Skip processing if there are no custom fields
-    if (!entity.customFields || !processedEntity.customFields) {
-        return processedEntity;
-    }
-
-    // Find the customFields field info
-    const customFieldsInfo = fields.find(field => field.name === 'customFields' && field.typeInfo);
-    if (!customFieldsInfo?.typeInfo) {
-        return processedEntity;
-    }
-
-    // Process only ID type custom fields
-    const idTypeCustomFields = customFieldsInfo.typeInfo.filter(field => field.type === 'ID');
-
-    for (const customField of idTypeCustomFields) {
-        const relationField = customField.name;
-
-        if (customField.list) {
-            // For list fields, the accessor is the field name without the "Ids" suffix
-            const propertyAccessorKey = customField.name.replace(/Ids$/, '');
-            const relationValue = entity.customFields[propertyAccessorKey];
-
-            if (Array.isArray(relationValue)) {
-                processedEntity.customFields[relationField] = relationValue.map((v: { id: string }) => v.id);
+    for (const field of fields) {
+        if (field.name === 'customFields' && field.typeInfo) {
+            // Found customFields at this level — process relation ID fields
+            const sourceCustomFields = entity[field.name];
+            if (!sourceCustomFields) {
+                continue;
             }
-            delete processedEntity.customFields[propertyAccessorKey];
-        } else {
-            // For single fields, the accessor is the field name without the "Id" suffix
-            const propertyAccessorKey = customField.name.replace(/Id$/, '');
-            const relationValue = entity.customFields[propertyAccessorKey];
-            processedEntity.customFields[relationField] = relationValue?.id;
-            delete processedEntity.customFields[propertyAccessorKey];
+
+            const customFieldsCopy = { ...sourceCustomFields };
+            const idTypeCustomFields = field.typeInfo.filter(f => f.type === 'ID');
+
+            for (const customField of idTypeCustomFields) {
+                const relationField = customField.name;
+
+                if (customField.list) {
+                    // For list fields, the accessor is the field name without the "Ids" suffix
+                    const propertyAccessorKey = customField.name.replace(/Ids$/, '');
+                    const relationValue = sourceCustomFields[propertyAccessorKey];
+
+                    if (Array.isArray(relationValue)) {
+                        customFieldsCopy[relationField] = relationValue.map((v: { id: string }) => v.id);
+                    }
+                    delete customFieldsCopy[propertyAccessorKey];
+                } else {
+                    // For single fields, the accessor is the field name without the "Id" suffix
+                    const propertyAccessorKey = customField.name.replace(/Id$/, '');
+                    const relationValue = sourceCustomFields[propertyAccessorKey];
+                    customFieldsCopy[relationField] = relationValue?.id;
+                    delete customFieldsCopy[propertyAccessorKey];
+                }
+            }
+            processedEntity[field.name as keyof E] = customFieldsCopy;
+        } else if (field.typeInfo && !field.isScalar && entity[field.name] != null) {
+            // Non-scalar nested field (e.g. `input`) — recurse into it
+            if (typeof entity[field.name] === 'object' && !Array.isArray(entity[field.name])) {
+                processedEntity[field.name as keyof E] = transformRelationFields(
+                    field.typeInfo,
+                    entity[field.name],
+                );
+            }
         }
     }
+
     return processedEntity;
 }
 
