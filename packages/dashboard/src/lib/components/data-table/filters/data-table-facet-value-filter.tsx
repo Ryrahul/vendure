@@ -10,7 +10,7 @@ import {
 import { api } from '@/vdb/graphql/api.js';
 import { graphql } from '@/vdb/graphql/graphql.js';
 import { cn } from '@/vdb/lib/utils.js';
-import { Trans } from '@lingui/react/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Loader2 } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -43,12 +43,14 @@ export function DataTableFacetValueFilter({
     value: incomingValue,
     onChange,
 }: Readonly<DataTableFacetValueFilterProps>) {
+    const { t } = useLingui();
     const initialIds: string[] = incomingValue?.in ?? [];
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(initialIds));
 
     const { data, isLoading } = useQuery({
-        queryKey: ['facetValuesForFilter'],
+        queryKey: FACET_VALUES_FILTER_QUERY_KEY,
         queryFn: () => api.query(getFacetValuesForFilterDocument, { options: { take: 500 } }),
+        staleTime: 1000 * 60 * 5,
     });
 
     const facetValues = data?.facetValues?.items ?? [];
@@ -88,7 +90,7 @@ export function DataTableFacetValueFilter({
                 </div>
             )}
             <Command className="border rounded-md">
-                <CommandInput placeholder="Search facet values..." />
+                <CommandInput placeholder={t`Search facet values...`} />
                 <CommandList className="max-h-[200px]">
                     <CommandEmpty>
                         <Trans>No facet values found.</Trans>
