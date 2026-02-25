@@ -179,18 +179,29 @@ describe('Promotions applied to Orders', () => {
             expect(applyCouponCode.errorCode).toBe(ErrorCode.COUPON_CODE_EXPIRED_ERROR);
         });
 
-        it('coupon code application is case-sensitive', async () => {
+        it('coupon code application is case-insensitive', async () => {
             const { applyCouponCode } = await shopClient.query<
                 CodegenShop.ApplyCouponCodeMutation,
                 CodegenShop.ApplyCouponCodeMutationVariables
             >(APPLY_COUPON_CODE, {
                 couponCode: TEST_COUPON_CODE.toLowerCase(),
             });
-            orderResultGuard.assertErrorResult(applyCouponCode);
-            expect(applyCouponCode.message).toBe(
-                `Coupon code "${TEST_COUPON_CODE.toLowerCase()}" is not valid`,
-            );
-            expect(applyCouponCode.errorCode).toBe(ErrorCode.COUPON_CODE_INVALID_ERROR);
+            orderResultGuard.assertSuccess(applyCouponCode);
+            // The canonical coupon code from the promotion should be stored
+            expect(applyCouponCode.couponCodes).toEqual([TEST_COUPON_CODE]);
+            expect(applyCouponCode.discounts.length).toBe(1);
+            expect(applyCouponCode.discounts[0].description).toBe('Free with test coupon');
+            expect(applyCouponCode.totalWithTax).toBe(0);
+        });
+
+        it('removes the lowercase-applied coupon code for next test', async () => {
+            const { removeCouponCode } = await shopClient.query<
+                CodegenShop.RemoveCouponCodeMutation,
+                CodegenShop.RemoveCouponCodeMutationVariables
+            >(REMOVE_COUPON_CODE, {
+                couponCode: TEST_COUPON_CODE,
+            });
+            expect(removeCouponCode!.discounts.length).toBe(0);
         });
 
         it('applies a valid coupon code', async () => {
@@ -216,6 +227,19 @@ describe('Promotions applied to Orders', () => {
                     data: {
                         from: 'Created',
                         to: 'AddingItems',
+                    },
+                },
+                {
+                    type: HistoryEntryType.ORDER_COUPON_APPLIED,
+                    data: {
+                        couponCode: TEST_COUPON_CODE,
+                        promotionId: 'T_3',
+                    },
+                },
+                {
+                    type: HistoryEntryType.ORDER_COUPON_REMOVED,
+                    data: {
+                        couponCode: TEST_COUPON_CODE,
                     },
                 },
                 {
@@ -282,6 +306,19 @@ describe('Promotions applied to Orders', () => {
                         couponCode: TEST_COUPON_CODE,
                     },
                 },
+                {
+                    type: HistoryEntryType.ORDER_COUPON_APPLIED,
+                    data: {
+                        couponCode: TEST_COUPON_CODE,
+                        promotionId: 'T_3',
+                    },
+                },
+                {
+                    type: HistoryEntryType.ORDER_COUPON_REMOVED,
+                    data: {
+                        couponCode: TEST_COUPON_CODE,
+                    },
+                },
             ]);
         });
 
@@ -299,6 +336,19 @@ describe('Promotions applied to Orders', () => {
                     data: {
                         from: 'Created',
                         to: 'AddingItems',
+                    },
+                },
+                {
+                    type: HistoryEntryType.ORDER_COUPON_APPLIED,
+                    data: {
+                        couponCode: TEST_COUPON_CODE,
+                        promotionId: 'T_3',
+                    },
+                },
+                {
+                    type: HistoryEntryType.ORDER_COUPON_REMOVED,
+                    data: {
+                        couponCode: TEST_COUPON_CODE,
                     },
                 },
                 {

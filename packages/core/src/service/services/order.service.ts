@@ -998,7 +998,7 @@ export class OrderService {
         couponCode: string,
     ): Promise<ErrorResultUnion<ApplyCouponCodeResult, Order>> {
         const order = await this.getOrderOrThrow(ctx, orderId);
-        if (order.couponCodes.includes(couponCode)) {
+        if (order.couponCodes.some(cc => cc.toLowerCase() === couponCode.toLowerCase())) {
             return order;
         }
         const validationResult = await this.promotionService.validateCouponCode(
@@ -1009,14 +1009,17 @@ export class OrderService {
         if (isGraphQlErrorResult(validationResult)) {
             return validationResult;
         }
-        order.couponCodes.push(couponCode);
+        // Store the canonical coupon code from the promotion rather than the
+        // user-typed casing, so that subsequent lookups are consistent.
+        const canonicalCode = validationResult.couponCode;
+        order.couponCodes.push(canonicalCode);
         await this.historyService.createHistoryEntryForOrder({
             ctx,
             orderId: order.id,
             type: HistoryEntryType.ORDER_COUPON_APPLIED,
-            data: { couponCode, promotionId: validationResult.id },
+            data: { couponCode: canonicalCode, promotionId: validationResult.id },
         });
-        await this.eventBus.publish(new CouponCodeEvent(ctx, couponCode, orderId, 'assigned'));
+        await this.eventBus.publish(new CouponCodeEvent(ctx, canonicalCode, orderId, 'assigned'));
         return this.applyPriceAdjustments(ctx, order);
     }
 
@@ -1026,8 +1029,8 @@ export class OrderService {
      */
     async removeCouponCode(ctx: RequestContext, orderId: ID, couponCode: string) {
         const order = await this.getOrderOrThrow(ctx, orderId);
-        if (order.couponCodes.includes(couponCode)) {
-            order.couponCodes = order.couponCodes.filter(cc => cc !== couponCode);
+        if (order.couponCodes.some(cc => cc.toLowerCase() === couponCode.toLowerCase())) {
+            order.couponCodes = order.couponCodes.filter(cc => cc.toLowerCase() !== couponCode.toLowerCase());
             await this.historyService.createHistoryEntryForOrder({
                 ctx,
                 orderId: order.id,

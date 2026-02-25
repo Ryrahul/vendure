@@ -15,7 +15,7 @@ import {
 } from '@vendure/common/lib/generated-types';
 import { ID, PaginatedList } from '@vendure/common/lib/shared-types';
 import { unique } from '@vendure/common/lib/unique';
-import { In, IsNull } from 'typeorm';
+import { In, IsNull, Raw } from 'typeorm';
 
 import { RequestContext } from '../../api/common/request-context';
 import { RelationPaths } from '../../api/decorators/relations.decorator';
@@ -238,8 +238,9 @@ export class PromotionService {
     /**
      * @description
      * Checks the validity of a coupon code, by checking that it is associated with an existing,
-     * enabled and non-expired Promotion. Additionally, if there is a usage limit on the coupon code,
-     * this method will enforce that limit against the specified Customer.
+     * enabled and non-expired Promotion. The comparison is case-insensitive, so e.g. "SUMMER20"
+     * and "summer20" are treated as the same code. Additionally, if there is a usage limit on the
+     * coupon code, this method will enforce that limit against the specified Customer.
      */
     async validateCouponCode(
         ctx: RequestContext,
@@ -248,18 +249,14 @@ export class PromotionService {
     ): Promise<JustErrorResults<ApplyCouponCodeResult> | Promotion> {
         const promotion = await this.connection.getRepository(ctx, Promotion).findOne({
             where: {
-                couponCode,
+                couponCode: Raw(alias => `LOWER(${alias}) = LOWER(:couponCode)`, { couponCode }),
                 enabled: true,
                 deletedAt: IsNull(),
                 channels: { id: ctx.channelId },
             },
             relations: ['channels'],
         });
-        if (
-            !promotion ||
-            promotion.couponCode !== couponCode ||
-            !promotion.channels.find(c => idsAreEqual(c.id, ctx.channelId))
-        ) {
+        if (!promotion || !promotion.channels.find(c => idsAreEqual(c.id, ctx.channelId))) {
             return new CouponCodeInvalidError({ couponCode });
         }
         if (promotion.endsAt && +promotion.endsAt < +new Date()) {

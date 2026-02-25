@@ -19,8 +19,8 @@ import {
 import { PromotionCondition, PromotionConditionState } from '../../config/promotion/promotion-condition';
 import { Channel } from '../channel/channel.entity';
 import { CustomPromotionFields } from '../custom-entity-fields';
-import { Order } from '../order/order.entity';
 import { OrderLine } from '../order-line/order-line.entity';
+import { Order } from '../order/order.entity';
 import { ShippingLine } from '../shipping-line/shipping-line.entity';
 
 import { PromotionTranslation } from './promotion-translation.entity';
@@ -203,7 +203,10 @@ export class Promotion
         if (this.startsAt && this.startsAt > new Date()) {
             return false;
         }
-        if (this.couponCode && !order.couponCodes.includes(this.couponCode)) {
+        if (
+            this.couponCode &&
+            !order.couponCodes.some(cc => cc.toLowerCase() === this.couponCode.toLowerCase())
+        ) {
             return false;
         }
         const promotionState: PromotionState = {};
