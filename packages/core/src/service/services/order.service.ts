@@ -1029,15 +1029,18 @@ export class OrderService {
      */
     async removeCouponCode(ctx: RequestContext, orderId: ID, couponCode: string) {
         const order = await this.getOrderOrThrow(ctx, orderId);
-        if (order.couponCodes.some(cc => cc.toLowerCase() === couponCode.toLowerCase())) {
-            order.couponCodes = order.couponCodes.filter(cc => cc.toLowerCase() !== couponCode.toLowerCase());
+        const matchedCode = order.couponCodes.find(cc => cc.toLowerCase() === couponCode.toLowerCase());
+        if (matchedCode) {
+            order.couponCodes = order.couponCodes.filter(
+                cc => cc.toLowerCase() !== matchedCode.toLowerCase(),
+            );
             await this.historyService.createHistoryEntryForOrder({
                 ctx,
                 orderId: order.id,
                 type: HistoryEntryType.ORDER_COUPON_REMOVED,
-                data: { couponCode },
+                data: { couponCode: matchedCode },
             });
-            await this.eventBus.publish(new CouponCodeEvent(ctx, couponCode, orderId, 'removed'));
+            await this.eventBus.publish(new CouponCodeEvent(ctx, matchedCode, orderId, 'removed'));
             return this.applyPriceAdjustments(ctx, order);
         } else {
             return order;

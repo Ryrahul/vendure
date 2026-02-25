@@ -571,6 +571,7 @@ export class OrderModifier {
         }
 
         if (input.couponCodes) {
+            const canonicalCouponCodes: string[] = [];
             for (const couponCode of input.couponCodes) {
                 const validationResult = await this.promotionService.validateCouponCode(
                     ctx,
@@ -583,18 +584,22 @@ export class OrderModifier {
                         | CouponCodeInvalidError
                         | CouponCodeLimitError;
                 }
-                if (!order.couponCodes.some(cc => cc.toLowerCase() === couponCode.toLowerCase())) {
+                const canonicalCode = validationResult.couponCode;
+                if (!canonicalCouponCodes.some(cc => cc.toLowerCase() === canonicalCode.toLowerCase())) {
+                    canonicalCouponCodes.push(canonicalCode);
+                }
+                if (!order.couponCodes.some(cc => cc.toLowerCase() === canonicalCode.toLowerCase())) {
                     // This is a new coupon code that hadn't been applied before
                     await this.historyService.createHistoryEntryForOrder({
                         ctx,
                         orderId: order.id,
                         type: HistoryEntryType.ORDER_COUPON_APPLIED,
-                        data: { couponCode, promotionId: validationResult.id },
+                        data: { couponCode: canonicalCode, promotionId: validationResult.id },
                     });
                 }
             }
             for (const existingCouponCode of order.couponCodes) {
-                if (!input.couponCodes.some(cc => cc.toLowerCase() === existingCouponCode.toLowerCase())) {
+                if (!canonicalCouponCodes.some(cc => cc.toLowerCase() === existingCouponCode.toLowerCase())) {
                     // An existing coupon code has been removed
                     await this.historyService.createHistoryEntryForOrder({
                         ctx,
@@ -604,7 +609,7 @@ export class OrderModifier {
                     });
                 }
             }
-            order.couponCodes = input.couponCodes;
+            order.couponCodes = canonicalCouponCodes;
         }
 
         const updatedOrderLines = order.lines.filter(l => updatedOrderLineIds.includes(l.id));
