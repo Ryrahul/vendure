@@ -92,36 +92,38 @@ export function DataTableFacetValueFilter({
             <Command className="border rounded-md">
                 <CommandInput placeholder={t`Search facet values...`} />
                 <CommandList className="max-h-[200px]">
-                    <CommandEmpty>
-                        <Trans>No facet values found.</Trans>
-                    </CommandEmpty>
                     {isLoading ? (
                         <div className="flex items-center justify-center p-4">
                             <Loader2 className="h-4 w-4 animate-spin" />
                         </div>
                     ) : (
-                        <CommandGroup>
-                            {facetValues.map(fv => {
-                                const isSelected = selectedIds.has(fv.id);
-                                return (
-                                    <CommandItem key={fv.id} onSelect={() => toggleValue(fv.id)}>
-                                        <div
-                                            className={cn(
-                                                'mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
-                                                isSelected
-                                                    ? 'bg-primary text-primary-foreground'
-                                                    : 'opacity-50 [&_svg]:invisible',
-                                            )}
-                                        >
-                                            <Check />
-                                        </div>
-                                        <span>
-                                            {fv.facet.name}: {fv.name}
-                                        </span>
-                                    </CommandItem>
-                                );
-                            })}
-                        </CommandGroup>
+                        <>
+                            <CommandEmpty>
+                                <Trans>No facet values found.</Trans>
+                            </CommandEmpty>
+                            <CommandGroup>
+                                {facetValues.map(fv => {
+                                    const isSelected = selectedIds.has(fv.id);
+                                    return (
+                                        <CommandItem key={fv.id} onSelect={() => toggleValue(fv.id)}>
+                                            <div
+                                                className={cn(
+                                                    'mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
+                                                    isSelected
+                                                        ? 'bg-primary text-primary-foreground'
+                                                        : 'opacity-50 [&_svg]:invisible',
+                                                )}
+                                            >
+                                                <Check />
+                                            </div>
+                                            <span>
+                                                {fv.facet.name}: {fv.name}
+                                            </span>
+                                        </CommandItem>
+                                    );
+                                })}
+                            </CommandGroup>
+                        </>
                     )}
                 </CommandList>
             </Command>
