@@ -10,11 +10,12 @@ import {
 } from '@/vdb/components/ui/dialog.js';
 import { api } from '@/vdb/graphql/api.js';
 import { useChannel } from '@/vdb/hooks/use-channel.js';
-import { Trans } from '@lingui/react/macro';
 import { normalizeString } from '@/vdb/lib/utils.js';
+import { Trans, useLingui } from '@lingui/react/macro';
 import { useMutation } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import { toast } from 'sonner';
 import {
     addOptionGroupToProductDocument,
     createProductOptionGroupDocument,
@@ -31,6 +32,7 @@ export function CreateProductVariantsDialog({
     productName: string;
     onSuccess?: () => void;
 }) {
+    const { t } = useLingui();
     const { activeChannel } = useChannel();
     const [variantData, setVariantData] = useState<VariantConfiguration | null>(null);
     const [open, setOpen] = useState(false);
@@ -127,8 +129,9 @@ export function CreateProductVariantsDialog({
             setOpen(false);
             onSuccess?.();
         } catch (error) {
-            console.error('Error creating variants:', error);
-            // Handle error (show toast notification, etc.)
+            toast.error(t`Failed to create product variants`, {
+                description: error instanceof Error ? error.message : t`Unknown error`,
+            });
         }
     }
 
