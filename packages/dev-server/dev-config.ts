@@ -8,10 +8,7 @@ import {
     DefaultSchedulerPlugin,
     DefaultSearchPlugin,
     dummyPaymentHandler,
-    LanguageCode,
     LogLevel,
-    Permission,
-    Product,
     SettingsStoreScopes,
     VendureConfig,
 } from '@vendure/core';
