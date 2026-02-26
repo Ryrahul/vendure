@@ -1,4 +1,4 @@
-import { PluginCommonModule, VendurePlugin } from '@vendure/core';
+import { Permission, PluginCommonModule, VendurePlugin } from '@vendure/core';
 
 import { adminApiExtensions, shopApiExtensions } from './api/api-extensions';
 import { ProductEntityResolver } from './api/product-entity.resolver';
@@ -25,6 +25,7 @@ import { ProductReview } from './entities/product-review.entity';
             type: 'relation',
             list: true,
             entity: ProductReview,
+            requiresPermission:Permission.SuperAdmin,
             inverseSide: (review: ProductReview) => review.product,
             ui: { component: 'review-multi-select-with-create' },
         });
