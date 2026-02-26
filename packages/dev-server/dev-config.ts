@@ -77,60 +77,7 @@ export const devConfig: VendureConfig = {
             },
         ],
     },
-    customFields: {
-        Collection: [
-            {
-                name: 'customField',
-                type: 'string',
-                requiresPermission:Permission.SuperAdmin,
-                label: [ 
-                    { languageCode: LanguageCode.en, value: 'Info URL' }, 
-                    { languageCode: LanguageCode.de, value: 'Info-URL' }, 
-                    { languageCode: LanguageCode.es, value: 'URL de información' }, 
-                ],             },
-                {
-               name:"relationtest",
-               type: "relation",
-               entity: Product,
-               requiresPermission:Permission.SuperAdmin,
-               label: [ 
-                { languageCode: LanguageCode.en, value: 'Info URL' }, 
-                { languageCode: LanguageCode.de, value: 'Info-URL' }, 
-                { languageCode: LanguageCode.es, value: 'URL de información' }, 
-            ],             },
-                {
-                    name: 'customFieldddd',
-                    type: "localeString",
-                    requiresPermission:Permission.SuperAdmin,
-                    label: [ 
-                        { languageCode: LanguageCode.en, value: 'Info URL' }, 
-                        { languageCode: LanguageCode.de, value: 'Info-URL' }, 
-                        { languageCode: LanguageCode.es, value: 'URL de información' }, 
-                    ],             },
-        ],
-        Product: [
-            {
-                name: 'customField',
-                type: "localeString",
-                requiresPermission:Permission.SuperAdmin,
-                label: [ 
-                    { languageCode: LanguageCode.en, value: 'Info URL' }, 
-                    { languageCode: LanguageCode.de, value: 'Info-URL' }, 
-                    { languageCode: LanguageCode.es, value: 'URL de información' }, 
-                ],             },
-                {
-                    name: 'relationtest2',
-                    type: "relation",
-                    entity: Product,
-                    requiresPermission:Permission.SuperAdmin,
-                    label: [ 
-                        { languageCode: LanguageCode.en, value: 'Info URL' }, 
-                        { languageCode: LanguageCode.de, value: 'Info-URL' }, 
-                        { languageCode: LanguageCode.es, value: 'URL de información' }, 
-                    ],             },
-            
-        ],
-    },
+    customFields: {},
     logger: new DefaultLogger({ level: LogLevel.Verbose }),
     importExportOptions: {
         importAssetsDir: path.join(__dirname, 'import-assets'),

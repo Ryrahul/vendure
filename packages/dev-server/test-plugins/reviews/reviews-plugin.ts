@@ -25,7 +25,6 @@ import { ProductReview } from './entities/product-review.entity';
             type: 'relation',
             list: true,
             entity: ProductReview,
-            requiresPermission:Permission.SuperAdmin,
             inverseSide: (review: ProductReview) => review.product,
             ui: { component: 'review-multi-select-with-create' },
         });
