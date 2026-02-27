@@ -3,6 +3,7 @@ import { FormFieldWrapper } from '@/vdb/components/shared/form-field-wrapper.js'
 import { Badge } from '@/vdb/components/ui/badge.js';
 import { Button } from '@/vdb/components/ui/button.js';
 import { Input } from '@/vdb/components/ui/input.js';
+import { addCustomFields } from '@/vdb/framework/document-introspection/add-custom-fields.js';
 import {
     CustomFieldsPageBlock,
     DetailFormGrid,
@@ -25,7 +26,7 @@ export const Route = createFileRoute('/_authenticated/_profile/profile')({
     component: ProfilePage,
     loader: async ({ context }) => {
         await context.queryClient.ensureQueryData({
-            queryFn: () => api.query(activeAdministratorDocument),
+            queryFn: () => api.query(addCustomFields(activeAdministratorDocument)),
             queryKey: ['DetailPage', 'profile'],
         });
         return {
@@ -115,11 +116,7 @@ function ProfilePage() {
                         />
                     </DetailFormGrid>
                 </PageBlock>
-                <PageBlock
-                    column="side"
-                    blockId="auth-methods"
-                    title={<Trans>Authentication methods</Trans>}
-                >
+                <PageBlock column="side" blockId="auth-methods" title={<Trans>Authentication methods</Trans>}>
                     <div className="space-y-2">
                         {entity?.user?.authenticationMethods.map(method => (
                             <div
