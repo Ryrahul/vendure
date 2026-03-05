@@ -155,7 +155,11 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
                                 ? refetchedData.me.channels.find(c => c.id === settings.activeChannelId)
                                 : undefined;
                             const channel = previousChannel ?? refetchedData.me.channels[0];
-                            localStorage.setItem(LS_KEY_SELECTED_CHANNEL_TOKEN, channel.token);
+                            try {
+                                localStorage.setItem(LS_KEY_SELECTED_CHANNEL_TOKEN, channel.token);
+                            } catch (e) {
+                                console.error('Failed to store selected channel in localStorage', e);
+                            }
                             setActiveChannelId(channel.id);
                         }
                         // Invalidate all queries to ensure fresh data after login
