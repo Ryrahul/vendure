@@ -74,9 +74,14 @@ export function transformRelationFields<E extends Record<string, any>>(fields: F
             processedEntity[field.name as keyof E] = customFieldsCopy;
         } else if (field.typeInfo && !field.isScalar && entity[field.name] != null) {
             // Non-scalar nested field (e.g. `input`) — recurse into it
-            if (typeof entity[field.name] === 'object' && !Array.isArray(entity[field.name])) {
+            const { typeInfo } = field;
+            if (Array.isArray(entity[field.name])) {
+                processedEntity[field.name as keyof E] = entity[field.name].map((item: any) =>
+                    transformRelationFields(typeInfo, item),
+                );
+            } else if (typeof entity[field.name] === 'object') {
                 processedEntity[field.name as keyof E] = transformRelationFields(
-                    field.typeInfo,
+                    typeInfo,
                     entity[field.name],
                 );
             }

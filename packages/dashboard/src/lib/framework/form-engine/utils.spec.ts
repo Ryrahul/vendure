@@ -321,6 +321,90 @@ describe('transformRelationFields', () => {
         expect(result).not.toBe(entity);
         expect(result.input).not.toBe(entity.input);
     });
+
+    it('should handle array fields containing customFields (e.g. translations)', () => {
+        const fields: FieldInfo[] = [
+            {
+                name: 'lines',
+                type: 'OrderLineInput',
+                nullable: false,
+                list: true,
+                isPaginatedList: false,
+                isScalar: false,
+                typeInfo: [
+                    {
+                        name: 'customFields',
+                        type: 'CustomFields',
+                        nullable: true,
+                        list: false,
+                        isPaginatedList: false,
+                        isScalar: false,
+                        typeInfo: [
+                            {
+                                name: 'featuredProductId',
+                                type: 'ID',
+                                nullable: true,
+                                list: false,
+                                isPaginatedList: false,
+                                isScalar: true,
+                            },
+                        ],
+                    },
+                ],
+            },
+        ];
+        const entity = {
+            lines: [
+                { customFields: { featuredProduct: { id: '1', name: 'Product 1' } } },
+                { customFields: { featuredProduct: { id: '2', name: 'Product 2' } } },
+            ],
+        };
+        const result = transformRelationFields(fields, entity);
+
+        expect(result.lines[0].customFields).toEqual({ featuredProductId: '1' });
+        expect(result.lines[0].customFields).not.toHaveProperty('featuredProduct');
+        expect(result.lines[1].customFields).toEqual({ featuredProductId: '2' });
+        expect(result.lines[1].customFields).not.toHaveProperty('featuredProduct');
+    });
+
+    it('should not mutate original array items when processing array fields', () => {
+        const fields: FieldInfo[] = [
+            {
+                name: 'lines',
+                type: 'OrderLineInput',
+                nullable: false,
+                list: true,
+                isPaginatedList: false,
+                isScalar: false,
+                typeInfo: [
+                    {
+                        name: 'customFields',
+                        type: 'CustomFields',
+                        nullable: true,
+                        list: false,
+                        isPaginatedList: false,
+                        isScalar: false,
+                        typeInfo: [
+                            {
+                                name: 'featuredProductId',
+                                type: 'ID',
+                                nullable: true,
+                                list: false,
+                                isPaginatedList: false,
+                                isScalar: true,
+                            },
+                        ],
+                    },
+                ],
+            },
+        ];
+        const entity = {
+            lines: [{ customFields: { featuredProduct: { id: '1', name: 'Product 1' } } }],
+        };
+        transformRelationFields(fields, entity);
+
+        expect(entity.lines[0].customFields.featuredProduct).toEqual({ id: '1', name: 'Product 1' });
+    });
 });
 
 describe('convertEmptyStringsToNull', () => {
