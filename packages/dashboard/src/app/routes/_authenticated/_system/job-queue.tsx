@@ -29,7 +29,6 @@ import { CancelJobsBulkAction } from './components/cancel-jobs-bulk-action.js';
 import { PayloadDialog } from './components/payload-dialog.js';
 import { cancelJobDocument, jobListDocument, jobQueueListDocument } from './job-queue.graphql.js';
 
-
 function formatDuration(ms: number): string {
     if (ms < 1000) {
         return `${ms}ms`;
