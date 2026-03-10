@@ -249,6 +249,9 @@ export class PromotionService {
     ): Promise<JustErrorResults<ApplyCouponCodeResult> | Promotion> {
         const promotion = await this.connection.getRepository(ctx, Promotion).findOne({
             where: {
+                // Use Raw() with LOWER() for a case-insensitive DB lookup, so that e.g.
+                // "summer20" matches a promotion with couponCode "SUMMER20". LOWER() is
+                // supported across all Vendure DB backends (MariaDB, PostgreSQL, SQLite).
                 couponCode: Raw(alias => `LOWER(${alias}) = LOWER(:couponCode)`, { couponCode }),
                 enabled: true,
                 deletedAt: IsNull(),

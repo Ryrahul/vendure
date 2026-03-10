@@ -17,6 +17,7 @@ import {
     PromotionShippingAction,
 } from '../../config/promotion/promotion-action';
 import { PromotionCondition, PromotionConditionState } from '../../config/promotion/promotion-condition';
+import { couponCodesMatch } from '../../service/helpers/utils/coupon-codes-match';
 import { Channel } from '../channel/channel.entity';
 import { CustomPromotionFields } from '../custom-entity-fields';
 import { OrderLine } from '../order-line/order-line.entity';
@@ -203,10 +204,7 @@ export class Promotion
         if (this.startsAt && this.startsAt > new Date()) {
             return false;
         }
-        if (
-            this.couponCode &&
-            !order.couponCodes.some(cc => cc.toLowerCase() === this.couponCode.toLowerCase())
-        ) {
+        if (this.couponCode && !order.couponCodes.some(cc => couponCodesMatch(cc, this.couponCode))) {
             return false;
         }
         const promotionState: PromotionState = {};

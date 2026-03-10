@@ -116,6 +116,7 @@ import { RefundState } from '../helpers/refund-state-machine/refund-state';
 import { RefundStateMachine } from '../helpers/refund-state-machine/refund-state-machine';
 import { ShippingCalculator } from '../helpers/shipping-calculator/shipping-calculator';
 import { TranslatorService } from '../helpers/translator/translator.service';
+import { couponCodesMatch } from '../helpers/utils/coupon-codes-match';
 import { isForeignKeyViolationError } from '../helpers/utils/db-errors';
 import { getOrdersFromLines, totalCoveredByPayments } from '../helpers/utils/order-utils';
 import { patchEntity } from '../helpers/utils/patch-entity';
@@ -998,7 +999,7 @@ export class OrderService {
         couponCode: string,
     ): Promise<ErrorResultUnion<ApplyCouponCodeResult, Order>> {
         const order = await this.getOrderOrThrow(ctx, orderId);
-        if (order.couponCodes.some(cc => cc.toLowerCase() === couponCode.toLowerCase())) {
+        if (order.couponCodes.some(cc => couponCodesMatch(cc, couponCode))) {
             return order;
         }
         const validationResult = await this.promotionService.validateCouponCode(
@@ -1029,11 +1030,9 @@ export class OrderService {
      */
     async removeCouponCode(ctx: RequestContext, orderId: ID, couponCode: string) {
         const order = await this.getOrderOrThrow(ctx, orderId);
-        const matchedCode = order.couponCodes.find(cc => cc.toLowerCase() === couponCode.toLowerCase());
+        const matchedCode = order.couponCodes.find(cc => couponCodesMatch(cc, couponCode));
         if (matchedCode) {
-            order.couponCodes = order.couponCodes.filter(
-                cc => cc.toLowerCase() !== matchedCode.toLowerCase(),
-            );
+            order.couponCodes = order.couponCodes.filter(cc => !couponCodesMatch(cc, matchedCode));
             await this.historyService.createHistoryEntryForOrder({
                 ctx,
                 orderId: order.id,

@@ -194,14 +194,58 @@ describe('Promotions applied to Orders', () => {
             expect(applyCouponCode.totalWithTax).toBe(0);
         });
 
-        it('removes the lowercase-applied coupon code for next test', async () => {
+        it('removes a coupon code with different casing than it was applied', async () => {
+            // Re-apply with lowercase
+            const { applyCouponCode } = await shopClient.query<
+                CodegenShop.ApplyCouponCodeMutation,
+                CodegenShop.ApplyCouponCodeMutationVariables
+            >(APPLY_COUPON_CODE, {
+                couponCode: TEST_COUPON_CODE.toLowerCase(),
+            });
+            orderResultGuard.assertSuccess(applyCouponCode);
+            expect(applyCouponCode.couponCodes).toEqual([TEST_COUPON_CODE]);
+
+            // #4364 — remove using different casing than how it was applied
             const { removeCouponCode } = await shopClient.query<
+                CodegenShop.RemoveCouponCodeMutation,
+                CodegenShop.RemoveCouponCodeMutationVariables
+            >(REMOVE_COUPON_CODE, {
+                couponCode: TEST_COUPON_CODE.toLowerCase(),
+            });
+            expect(removeCouponCode!.couponCodes).toEqual([]);
+            expect(removeCouponCode!.discounts.length).toBe(0);
+        });
+
+        // #4364 — applying the same coupon code with different casings should not create duplicates
+        it('de-duplicates coupon codes case-insensitively', async () => {
+            // Apply with uppercase (canonical form)
+            const { applyCouponCode: first } = await shopClient.query<
+                CodegenShop.ApplyCouponCodeMutation,
+                CodegenShop.ApplyCouponCodeMutationVariables
+            >(APPLY_COUPON_CODE, {
+                couponCode: TEST_COUPON_CODE,
+            });
+            orderResultGuard.assertSuccess(first);
+            expect(first.couponCodes).toEqual([TEST_COUPON_CODE]);
+
+            // Apply again with lowercase — should not duplicate
+            const { applyCouponCode: second } = await shopClient.query<
+                CodegenShop.ApplyCouponCodeMutation,
+                CodegenShop.ApplyCouponCodeMutationVariables
+            >(APPLY_COUPON_CODE, {
+                couponCode: TEST_COUPON_CODE.toLowerCase(),
+            });
+            orderResultGuard.assertSuccess(second);
+            expect(second.couponCodes).toEqual([TEST_COUPON_CODE]);
+            expect(second.couponCodes.length).toBe(1);
+
+            // Clean up
+            await shopClient.query<
                 CodegenShop.RemoveCouponCodeMutation,
                 CodegenShop.RemoveCouponCodeMutationVariables
             >(REMOVE_COUPON_CODE, {
                 couponCode: TEST_COUPON_CODE,
             });
-            expect(removeCouponCode!.discounts.length).toBe(0);
         });
 
         it('applies a valid coupon code', async () => {
@@ -229,6 +273,22 @@ describe('Promotions applied to Orders', () => {
                         to: 'AddingItems',
                     },
                 },
+                // From "coupon code application is case-insensitive" test
+                {
+                    type: HistoryEntryType.ORDER_COUPON_APPLIED,
+                    data: {
+                        couponCode: TEST_COUPON_CODE,
+                        promotionId: 'T_3',
+                    },
+                },
+                // From "removes a coupon code with different casing" test
+                {
+                    type: HistoryEntryType.ORDER_COUPON_REMOVED,
+                    data: {
+                        couponCode: TEST_COUPON_CODE,
+                    },
+                },
+                // From "de-duplicates coupon codes case-insensitively" test
                 {
                     type: HistoryEntryType.ORDER_COUPON_APPLIED,
                     data: {
@@ -242,6 +302,7 @@ describe('Promotions applied to Orders', () => {
                         couponCode: TEST_COUPON_CODE,
                     },
                 },
+                // From "applies a valid coupon code" test
                 {
                     type: HistoryEntryType.ORDER_COUPON_APPLIED,
                     data: {
@@ -293,6 +354,22 @@ describe('Promotions applied to Orders', () => {
                         to: 'AddingItems',
                     },
                 },
+                // From "coupon code application is case-insensitive" test
+                {
+                    type: HistoryEntryType.ORDER_COUPON_APPLIED,
+                    data: {
+                        couponCode: TEST_COUPON_CODE,
+                        promotionId: 'T_3',
+                    },
+                },
+                // From "removes a coupon code with different casing" test
+                {
+                    type: HistoryEntryType.ORDER_COUPON_REMOVED,
+                    data: {
+                        couponCode: TEST_COUPON_CODE,
+                    },
+                },
+                // From "de-duplicates coupon codes case-insensitively" test
                 {
                     type: HistoryEntryType.ORDER_COUPON_APPLIED,
                     data: {
@@ -306,6 +383,7 @@ describe('Promotions applied to Orders', () => {
                         couponCode: TEST_COUPON_CODE,
                     },
                 },
+                // From "applies a valid coupon code" test
                 {
                     type: HistoryEntryType.ORDER_COUPON_APPLIED,
                     data: {
@@ -313,6 +391,7 @@ describe('Promotions applied to Orders', () => {
                         promotionId: 'T_3',
                     },
                 },
+                // From "removes a coupon code" test
                 {
                     type: HistoryEntryType.ORDER_COUPON_REMOVED,
                     data: {
@@ -330,12 +409,27 @@ describe('Promotions applied to Orders', () => {
                 couponCode: 'NOT_THERE',
             });
 
+            // History should be unchanged from previous test — no new entry
+            // for the failed removal of 'NOT_THERE'
             expect(removeCouponCode!.history.items.map(i => omit(i, ['id']))).toEqual([
                 {
                     type: HistoryEntryType.ORDER_STATE_TRANSITION,
                     data: {
                         from: 'Created',
                         to: 'AddingItems',
+                    },
+                },
+                {
+                    type: HistoryEntryType.ORDER_COUPON_APPLIED,
+                    data: {
+                        couponCode: TEST_COUPON_CODE,
+                        promotionId: 'T_3',
+                    },
+                },
+                {
+                    type: HistoryEntryType.ORDER_COUPON_REMOVED,
+                    data: {
+                        couponCode: TEST_COUPON_CODE,
                     },
                 },
                 {
