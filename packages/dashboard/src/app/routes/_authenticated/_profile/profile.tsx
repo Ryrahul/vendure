@@ -47,6 +47,7 @@ function ProfilePage() {
         queryDocument: activeAdministratorDocument,
         entityField: 'activeAdministrator',
         updateDocument: updateAdministratorDocument,
+        pageId,
         setValuesForUpdate: entity => {
             return {
                 id: entity.id,
