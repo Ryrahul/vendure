@@ -15,7 +15,7 @@ export function MetricsChart({
 
     const yAxisWidth = useMemo(() => {
         const maxValue = Math.max(0, ...chartData.map(d => d.sales));
-        const formatted = formatValue(maxValue);
+        const formatted = String(formatValue(maxValue));
         return Math.max(60, formatted.length * 7);
     }, [chartData, formatValue]);
 
