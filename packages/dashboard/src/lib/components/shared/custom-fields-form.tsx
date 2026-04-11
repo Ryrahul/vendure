@@ -93,9 +93,9 @@ export function CustomFieldsForm({ entityType, control, formPathPrefix, disabled
     // Tabbed view
     return (
         <Tabs defaultValue={groupedFields[0]?.tabName} className="w-full">
-            <TabsList className="h-auto w-full flex-wrap justify-start">
+            <TabsList className="h-auto w-full justify-start overflow-x-auto overflow-y-hidden scrollbar-none">
                 {groupedFields.map(group => (
-                    <TabsTrigger key={group.tabName} value={group.tabName}>
+                    <TabsTrigger key={group.tabName} value={group.tabName} className="shrink-0">
                         {group.tabName === 'general' ? t`General` : group.tabName}
                     </TabsTrigger>
                 ))}
