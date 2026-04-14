@@ -756,6 +756,62 @@ describe('addCustomFields()', () => {
             expect(printed).toContain('vatNumber');
         });
 
+        it('Works with the timing issue - called later when globalCustomFieldsMap is populated', () => {
+            const orderLineFragment = graphql(`
+                fragment OrderLine on OrderLine {
+                    id
+                    quantity
+                }
+            `);
+
+            const orderDetailFragment = graphql(
+                `
+                    fragment OrderDetail on Order {
+                        id
+                        code
+                        lines {
+                            ...OrderLine
+                        }
+                    }
+                `,
+                [orderLineFragment],
+            );
+
+            const orderDetailDocument = graphql(
+                `
+                    query GetOrder($id: ID!) {
+                        order(id: $id) {
+                            ...OrderDetail
+                        }
+                    }
+                `,
+                [orderDetailFragment],
+            );
+
+            // Initially, globalCustomFieldsMap is empty (simulating module load time)
+            const customFieldsConfig = new Map<string, CustomFieldConfig[]>();
+            // Documents are created...
+
+            // Later, when server config is loaded and custom fields are available
+            customFieldsConfig.set('Order', [{ name: 'orderCustomField', type: 'string', list: false }]);
+            customFieldsConfig.set('OrderLine', [
+                { name: 'orderLineCustomField', type: 'string', list: false },
+            ]);
+
+            // Now when addCustomFields is called (e.g., in a component), it has access to custom fields
+            const result = addCustomFields(orderDetailDocument, {
+                customFieldsMap: customFieldsConfig,
+                includeNestedFragments: ['OrderLine'], // Explicitly include nested OrderLine fragment
+            });
+            const printed = print(result);
+
+            // Should add customFields to both Order and OrderLine
+            expect(printed).toContain('orderCustomField');
+            expect(printed).toContain('orderLineCustomField');
+        });
+    });
+
+    describe('Empty custom fields handling', () => {
         // https://github.com/vendurehq/vendure/issues/4650
         // When all custom fields have ui.dashboard: false, the server returns an empty array
         // for that entity. The dashboard should remove the bare `customFields` field from the
@@ -809,60 +865,6 @@ describe('addCustomFields()', () => {
 
             // customFields should be removed entirely
             expect(printed).not.toContain('customFields');
-        });
-
-        it('Works with the timing issue - called later when globalCustomFieldsMap is populated', () => {
-            const orderLineFragment = graphql(`
-                fragment OrderLine on OrderLine {
-                    id
-                    quantity
-                }
-            `);
-
-            const orderDetailFragment = graphql(
-                `
-                    fragment OrderDetail on Order {
-                        id
-                        code
-                        lines {
-                            ...OrderLine
-                        }
-                    }
-                `,
-                [orderLineFragment],
-            );
-
-            const orderDetailDocument = graphql(
-                `
-                    query GetOrder($id: ID!) {
-                        order(id: $id) {
-                            ...OrderDetail
-                        }
-                    }
-                `,
-                [orderDetailFragment],
-            );
-
-            // Initially, globalCustomFieldsMap is empty (simulating module load time)
-            const customFieldsConfig = new Map<string, CustomFieldConfig[]>();
-            // Documents are created...
-
-            // Later, when server config is loaded and custom fields are available
-            customFieldsConfig.set('Order', [{ name: 'orderCustomField', type: 'string', list: false }]);
-            customFieldsConfig.set('OrderLine', [
-                { name: 'orderLineCustomField', type: 'string', list: false },
-            ]);
-
-            // Now when addCustomFields is called (e.g., in a component), it has access to custom fields
-            const result = addCustomFields(orderDetailDocument, {
-                customFieldsMap: customFieldsConfig,
-                includeNestedFragments: ['OrderLine'], // Explicitly include nested OrderLine fragment
-            });
-            const printed = print(result);
-
-            // Should add customFields to both Order and OrderLine
-            expect(printed).toContain('orderCustomField');
-            expect(printed).toContain('orderLineCustomField');
         });
     });
 });
