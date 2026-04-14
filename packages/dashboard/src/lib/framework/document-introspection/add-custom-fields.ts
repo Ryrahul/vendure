@@ -165,18 +165,6 @@ function applyCustomFieldsToSelection(
                     }) as FieldNode,
             );
 
-        // If after filtering there are no custom fields to select,
-        // remove any existing bare customFields field to avoid an empty selection set
-        if (selectionNodes.length === 0) {
-            if (existingCustomFieldsField) {
-                const index = (selectionSet.selections as SelectionNode[]).indexOf(existingCustomFieldsField);
-                if (index >= 0) {
-                    (selectionSet.selections as SelectionNode[]).splice(index, 1);
-                }
-            }
-            return;
-        }
-
         if (!existingCustomFieldsField) {
             // If no customFields field exists, add one
             (selectionSet.selections as SelectionNode[]).push({

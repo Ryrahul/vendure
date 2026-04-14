@@ -811,35 +811,6 @@ describe('addCustomFields()', () => {
             expect(printed).not.toContain('customFields');
         });
 
-        // https://github.com/vendurehq/vendure/issues/4650
-        it('Should remove bare customFields when includeCustomFields filter removes all fields', () => {
-            const documentNode = graphql(`
-                query GetOrder($id: ID!) {
-                    order(id: $id) {
-                        id
-                        code
-                        customFields
-                    }
-                }
-            `);
-
-            const customFieldsConfig = new Map<string, CustomFieldConfig[]>();
-            customFieldsConfig.set('Order', [
-                { name: 'field1', type: 'string', list: false },
-                { name: 'field2', type: 'string', list: false },
-            ]);
-
-            // includeCustomFields filter doesn't match any fields
-            const result = addCustomFields(documentNode, {
-                customFieldsMap: customFieldsConfig,
-                includeCustomFields: ['nonExistentField'],
-            });
-            const printed = print(result);
-
-            // customFields should be removed entirely
-            expect(printed).not.toContain('customFields');
-        });
-
         it('Works with the timing issue - called later when globalCustomFieldsMap is populated', () => {
             const orderLineFragment = graphql(`
                 fragment OrderLine on OrderLine {
