@@ -109,7 +109,24 @@ export const devConfig: VendureConfig = {
             },
         ],
     },
-    customFields: {},
+    customFields: {
+        Channel: [
+            {
+                name: 'brandTagline',
+                type: 'string',
+                nullable: true,
+                ui: { tab: 'Store branding & visual identity' },
+            },
+            {
+                name: 'metaDescription',
+                type: 'text',
+                nullable: true,
+                ui: { tab: 'Search engine optimization & metadata' },
+            },
+           
+  
+        ],
+    },
     logger: new DefaultLogger({ level: LogLevel.Verbose }),
     importExportOptions: {
         importAssetsDir: path.join(__dirname, 'import-assets'),
