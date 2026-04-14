@@ -121,7 +121,7 @@ export function CustomFieldsForm({ entityType, control, formPathPrefix, disabled
     );
 }
 
-function ScrollableTabsList({ children }: { children: React.ReactNode }) {
+function ScrollableTabsList({ children }: Readonly<{ children: React.ReactNode }>) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(false);
