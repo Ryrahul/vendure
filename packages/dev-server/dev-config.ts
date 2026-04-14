@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
+import { OnApplicationBootstrap } from '@nestjs/common';
 import { AdminUiPlugin } from '@vendure/admin-ui-plugin';
 import { AssetServerPlugin } from '@vendure/asset-server-plugin';
 import { ADMIN_API_PATH, API_PORT, SHOP_API_PATH } from '@vendure/common/lib/shared-constants';
-import { OnApplicationBootstrap } from '@nestjs/common';
 import {
     DefaultJobQueuePlugin,
     DefaultLogger,
@@ -24,8 +24,8 @@ import { TelemetryPlugin } from '@vendure/telemetry-plugin';
 import 'dotenv/config';
 import path from 'path';
 import { DataSourceOptions } from 'typeorm';
-import { NavModifierPlugin } from './test-plugins/nav-modifier-plugin/nav-modifier-plugin';
 import { FieldTestPlugin } from './test-plugins/field-test/field-test-plugin';
+import { NavModifierPlugin } from './test-plugins/nav-modifier-plugin/nav-modifier-plugin';
 import { ReviewsPlugin } from './test-plugins/reviews/reviews-plugin';
 
 const IS_INSTRUMENTED = process.env.IS_INSTRUMENTED === 'true';
@@ -109,24 +109,7 @@ export const devConfig: VendureConfig = {
             },
         ],
     },
-    customFields: {
-        Channel: [
-            {
-                name: 'brandTagline',
-                type: 'string',
-                nullable: true,
-                ui: { tab: 'Store branding & visual identity' },
-            },
-            {
-                name: 'metaDescription',
-                type: 'text',
-                nullable: true,
-                ui: { tab: 'Search engine optimization & metadata' },
-            },
-           
-  
-        ],
-    },
+    customFields: {},
     logger: new DefaultLogger({ level: LogLevel.Verbose }),
     importExportOptions: {
         importAssetsDir: path.join(__dirname, 'import-assets'),
