@@ -1,13 +1,14 @@
 import { ErrorPage } from '@/vdb/components/shared/error-page.js';
 import { Button } from '@/vdb/components/ui/button.js';
-import {
-    Page,
+import {    Page,
     PageActionBar,
-    PageActionBarRight,
     PageBlock,
     PageLayout,
     PageTitle,
 } from '@/vdb/framework/layout-engine/page-layout.js';
+import { ActionBarItem } from '@/vdb/framework/layout-engine/action-bar-item-wrapper.js';
+import { addCustomFields } from '@/vdb/framework/document-introspection/add-custom-fields.js';
+import { useCustomFieldConfig } from '@/vdb/hooks/use-custom-field-config.js';
 import { getDetailQueryOptions, useDetailPage } from '@/vdb/framework/page/use-detail-page.js';
 import { api } from '@/vdb/graphql/api.js';
 import { Trans, useLingui } from '@lingui/react/macro';
@@ -44,7 +45,9 @@ function ModifyOrderPage() {
     const queryClient = useQueryClient();
     const { form, submitHandler, entity } = useDetailPage({
         pageId,
-        queryDocument: orderDetailDocument,
+        queryDocument: addCustomFields(orderDetailDocument, {
+            includeNestedFragments: ['OrderLine', 'Fulfillment'],
+        }),
         setValuesForUpdate: entity => {
             return {
                 id: entity.id,
@@ -72,7 +75,8 @@ function ModifyOrderPage() {
     const { transitionToPreModifyingState, ManuallySelectNextState, selectNextState, transitionToState } =
         useTransitionOrderToState(entity?.id ?? '');
 
-    // Use the custom hook for order modification logic
+    const orderLineCustomFields = useCustomFieldConfig('OrderLine');
+
     const {
         modifyOrderInput,
         addedVariants,
@@ -116,6 +120,7 @@ function ModifyOrderPage() {
         modifyOrderInput,
         addedVariants,
         eligibleShippingMethods?.eligibleShippingMethodsForDraftOrder,
+        orderLineCustomFields.map(f => f.name),
     );
 
     // On successful state transition, invalidate the order detail query and navigate to the order detail page
@@ -163,11 +168,11 @@ function ModifyOrderPage() {
                 <Trans>Modify order</Trans>
             </PageTitle>
             <PageActionBar>
-                <PageActionBarRight>
+                <ActionBarItem itemId="cancel-modification-button">
                     <Button type="button" variant="secondary" onClick={handleCancelModificationClick}>
                         <Trans>Cancel modification</Trans>
                     </Button>
-                </PageActionBarRight>
+                </ActionBarItem>
             </PageActionBar>
             <PageLayout>
                 <PageBlock column="main" blockId="order-lines" title={<Trans>Order lines</Trans>}>
@@ -227,11 +232,9 @@ function ModifyOrderPage() {
                 </PageBlock>
                 <PageBlock column="side" blockId="customer" title={<Trans>Customer</Trans>}>
                     {entity.customer ? (
-                        <Button variant="outline" asChild>
-                            <Link to={`/customers/${entity?.customer?.id}`}>
-                                <User className="w-4 h-4" />
-                                {entity?.customer?.firstName} {entity?.customer?.lastName}
-                            </Link>
+                        <Button variant="outline" render={<Link to={`/customers/${entity?.customer?.id}`} />}>
+                            <User className="w-4 h-4" />
+                            {entity?.customer?.firstName} {entity?.customer?.lastName}
                         </Button>
                     ) : (
                         <div className="text-muted-foreground text-xs font-medium p-3 border rounded-md">
