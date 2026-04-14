@@ -157,7 +157,7 @@ function ScrollableTabsList({ children }: Readonly<{ children: React.ReactNode }
                     className="absolute left-0 top-0 z-10 flex h-full items-center bg-gradient-to-r from-muted via-muted/80 to-transparent pl-1 pr-3"
                     aria-label="Scroll tabs left"
                 >
-                    <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
+                    <ChevronLeft className="h-4 w-4" />
                 </button>
             )}
             <TabsList
@@ -173,7 +173,7 @@ function ScrollableTabsList({ children }: Readonly<{ children: React.ReactNode }
                     className="absolute right-0 top-0 z-10 flex h-full items-center bg-gradient-to-l from-muted via-muted/80 to-transparent pl-3 pr-1"
                     aria-label="Scroll tabs right"
                 >
-                    <ChevronRight className="h-4 w-4 rtl:rotate-180" />
+                    <ChevronRight className="h-4 w-4" />
                 </button>
             )}
         </div>
