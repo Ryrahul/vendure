@@ -115,12 +115,13 @@ function applyCustomFieldsToSelection(
     }
 
     const customFieldsForType = customFields.get(entityType);
+
+    // Check if there is already a customFields field in the fragment
+    const existingCustomFieldsField = selectionSet.selections.find(
+        selection => isFieldNode(selection) && selection.name.value === 'customFields',
+    ) as FieldNode | undefined;
+
     if (customFieldsForType && customFieldsForType.length) {
-        // Check if there is already a customFields field in the fragment
-        // to avoid duplication
-        const existingCustomFieldsField = selectionSet.selections.find(
-            selection => isFieldNode(selection) && selection.name.value === 'customFields',
-        ) as FieldNode | undefined;
         const selectionNodes: SelectionNode[] = customFieldsForType
             .filter(
                 field => !options?.includeCustomFields || options?.includeCustomFields.includes(field.name),
@@ -163,6 +164,19 @@ function applyCustomFieldsToSelection(
                             : {}),
                     }) as FieldNode,
             );
+
+        // If after filtering there are no custom fields to select,
+        // remove any existing bare customFields field to avoid an empty selection set
+        if (selectionNodes.length === 0) {
+            if (existingCustomFieldsField) {
+                const index = (selectionSet.selections as SelectionNode[]).indexOf(existingCustomFieldsField);
+                if (index >= 0) {
+                    (selectionSet.selections as SelectionNode[]).splice(index, 1);
+                }
+            }
+            return;
+        }
+
         if (!existingCustomFieldsField) {
             // If no customFields field exists, add one
             (selectionSet.selections as SelectionNode[]).push({
@@ -214,6 +228,14 @@ function applyCustomFieldsToSelection(
                     ),
                 },
             });
+        }
+    } else if (existingCustomFieldsField) {
+        // If there are no custom fields for this type (e.g. all marked with ui.dashboard: false),
+        // but there is a bare `customFields` field in the document, remove it to prevent
+        // a GraphQL error ("must have a selection of subfields")
+        const index = (selectionSet.selections as SelectionNode[]).indexOf(existingCustomFieldsField);
+        if (index >= 0) {
+            (selectionSet.selections as SelectionNode[]).splice(index, 1);
         }
     }
 }
