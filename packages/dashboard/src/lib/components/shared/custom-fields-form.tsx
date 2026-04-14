@@ -159,7 +159,7 @@ function ScrollableTabsList({ children }: Readonly<{ children: React.ReactNode }
                     onClick={() => scroll('left')}
                     aria-label="Scroll tabs left"
                 >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
                 </Button>
             )}
             <TabsList
@@ -176,7 +176,7 @@ function ScrollableTabsList({ children }: Readonly<{ children: React.ReactNode }
                     onClick={() => scroll('right')}
                     aria-label="Scroll tabs right"
                 >
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="h-4 w-4 rtl:rotate-180" />
                 </Button>
             )}
         </div>
