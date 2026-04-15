@@ -131,8 +131,8 @@ function ScrollableTabsList({ children }: Readonly<{ children: React.ReactNode }
         const updateScrollState = () => {
             const isRTL = getComputedStyle(el).direction === 'rtl';
             if (isRTL) {
-                setCanScrollLeft(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
-                setCanScrollRight(el.scrollLeft < 0);
+                setCanScrollLeft(el.scrollLeft < -1);
+                setCanScrollRight(Math.abs(el.scrollLeft) + el.clientWidth < el.scrollWidth - 1);
             } else {
                 setCanScrollLeft(el.scrollLeft > 0);
                 setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
@@ -151,7 +151,11 @@ function ScrollableTabsList({ children }: Readonly<{ children: React.ReactNode }
     const scroll = (direction: 'left' | 'right') => {
         const el = scrollRef.current;
         if (!el) return;
-        el.scrollBy({ left: direction === 'left' ? -200 : 200, behavior: 'smooth' });
+        const isRTL = getComputedStyle(el).direction === 'rtl';
+        const amount = isRTL
+            ? (direction === 'left' ? 200 : -200)
+            : (direction === 'left' ? -200 : 200);
+        el.scrollBy({ left: amount, behavior: 'smooth' });
     };
 
     return (
