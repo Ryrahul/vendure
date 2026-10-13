@@ -429,6 +429,28 @@ describe('ChannelAware Products and ProductVariants', () => {
             expect(check.variants[1].channels.map(c => c.id).sort()).toEqual(['T_1']);
         });
 
+        // #5556 — assignProductVariantsToChannel should also assign the variant's options and option groups
+        it("assigns the ProductVariant's options and option groups to the Channel", async () => {
+            const variantId = product1.variants[0].id;
+            adminClient.setChannelToken(THIRD_CHANNEL_TOKEN);
+
+            const { productVariant } = await adminClient.query(getVariantOptionsWithGroupDocument, {
+                id: variantId,
+            });
+            expect(productVariant?.options.length).toBeGreaterThan(0);
+            expect(productVariant?.options.map(o => o.group.id)).toEqual(
+                product1.variants[0].options.map(o => o.groupId),
+            );
+
+            const { productVariants } = await adminClient.query(getVariantListOptionsWithGroupDocument, {
+                options: { filter: { id: { eq: variantId } } },
+            });
+            expect(productVariants.items[0].options.map(o => o.group.id)).toEqual(
+                product1.variants[0].options.map(o => o.groupId),
+            );
+            adminClient.setChannelToken(E2E_DEFAULT_CHANNEL_TOKEN);
+        });
+
         it('does not assign ProductVariant to same channel twice', async () => {
             await adminClient.asSuperAdmin();
             adminClient.setChannelToken(E2E_DEFAULT_CHANNEL_TOKEN);
@@ -1353,6 +1375,36 @@ const assignStockLocationToChannelDocument = graphql(`
         assignStockLocationsToChannel(input: $input) {
             id
             name
+        }
+    }
+`);
+
+const getVariantOptionsWithGroupDocument = graphql(`
+    query GetVariantOptionsWithGroup($id: ID!) {
+        productVariant(id: $id) {
+            id
+            options {
+                id
+                group {
+                    id
+                }
+            }
+        }
+    }
+`);
+
+const getVariantListOptionsWithGroupDocument = graphql(`
+    query GetVariantListOptionsWithGroup($options: ProductVariantListOptions) {
+        productVariants(options: $options) {
+            items {
+                id
+                options {
+                    id
+                    group {
+                        id
+                    }
+                }
+            }
         }
     }
 `);
