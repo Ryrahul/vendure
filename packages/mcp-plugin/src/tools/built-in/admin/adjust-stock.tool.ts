@@ -56,8 +56,8 @@ export class AdjustStockTool implements McpToolHandler<AdjustStockInput> {
     ) {}
 
     async execute(ctx: RequestContext, input: AdjustStockInput) {
-        // The stock read and write below are not limited to the active channel, so we check the
-        // location here to avoid silently overwriting another channel's stock.
+        // The locked stock read and the write below are not limited to the active channel, so we check
+        // the location here to avoid silently overwriting another channel's stock.
         const location = await this.stockLocationService.findOne(ctx, input.locationId);
         if (!location) {
             throw new UserInputError(
