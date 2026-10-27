@@ -66,8 +66,13 @@ export class AdjustStockTool implements McpToolHandler<AdjustStockInput> {
         }
         // The write sets an absolute stockOnHand, so the read must hold the row lock until the tool's
         // transaction commits. Otherwise a concurrent adjustment would be overwritten. See #5652
-        const levels = await this.stockLevelService.getLockedStockLevelsForVariant(ctx, input.variantId);
-        const current = levels.find(level => idsAreEqual(level.stockLocationId, input.locationId));
+        let current = await this.findLockedStockLevel(ctx, input);
+        if (!current) {
+            // On Postgres a locked read which waited for another transaction does not return a row that
+            // transaction inserted, so the first stock at a location would be read as 0. A second read
+            // sees it. If there is still no row, core creates it with a stockOnHand of 0.
+            current = await this.findLockedStockLevel(ctx, input);
+        }
         const stockOnHand = (current?.stockOnHand ?? 0) + input.delta;
         if (stockOnHand < GRAPHQL_INT_MIN || stockOnHand > GRAPHQL_INT_MAX) {
             throw new UserInputError(
@@ -88,5 +93,10 @@ export class AdjustStockTool implements McpToolHandler<AdjustStockInput> {
         ]);
         const updated = await this.stockLevelService.getStockLevelsForVariant(ctx, input.variantId);
         return { stockLevels: updated.map(level => this.serializer.stockLevel(level)) };
+    }
+
+    private async findLockedStockLevel(ctx: RequestContext, input: AdjustStockInput) {
+        const levels = await this.stockLevelService.getLockedStockLevelsForVariant(ctx, input.variantId);
+        return levels.find(level => idsAreEqual(level.stockLocationId, input.locationId));
     }
 }

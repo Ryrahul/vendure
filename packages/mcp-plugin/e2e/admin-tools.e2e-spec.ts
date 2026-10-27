@@ -14,6 +14,7 @@ import {
     Payment,
     Product,
     ProductVariant,
+    ProductVariantService,
     RequestContext,
     RequestContextService,
     Sale,
@@ -1483,6 +1484,84 @@ describe('MCP built-in admin tools (direct mode)', () => {
                 );
             } finally {
                 await variants.update(variantId, { trackInventory: GlobalFlag.FALSE });
+            }
+        },
+    );
+
+    // #5652 — the first stock at a location has no StockLevel row to lock yet. On Postgres a locked read
+    // which waited does not return a row inserted while it waited, so a concurrent first adjustment at
+    // that location must still apply its delta to the figure the other one committed.
+    it.skipIf(!process.env.DB || process.env.DB === 'sqljs')(
+        'adjust_stock keeps a concurrent first adjustment at a location without stock',
+        async () => {
+            const token = await adminAccessToken();
+            const { createStockLocation } = await adminClient.query(gql`
+                mutation {
+                    createStockLocation(input: { name: "adjust-stock-new-location" }) {
+                        id
+                    }
+                }
+            `);
+            const newLocationId = getIdStrategy(server.app.get(ConfigService)).decodeId(
+                createStockLocation.id,
+            );
+            try {
+                // A Dashboard user sets the first stock at the location to 3 and has not committed yet.
+                const adjustedElsewhere = deferred();
+                const elsewhereMayCommit = deferred();
+                const elsewhere = connection.withTransaction(
+                    await server.app.get(RequestContextService).create({ apiType: 'admin' }),
+                    async txCtx => {
+                        await server.app
+                            .get(ProductVariantService)
+                            .update(txCtx, [
+                                {
+                                    id: variantId,
+                                    stockLevels: [{ stockLocationId: newLocationId, stockOnHand: 3 }],
+                                },
+                            ]);
+                        adjustedElsewhere.resolve();
+                        await elsewhereMayCommit.promise;
+                    },
+                );
+                await adjustedElsewhere.promise;
+
+                const adjusted = postMcp(
+                    baseUrl(),
+                    'admin',
+                    callTool(
+                        'adjust_stock',
+                        { variantId, locationId: newLocationId, delta: 1, confirm: true },
+                        1,
+                    ),
+                    { token },
+                );
+                // See the fulfilment test above for why a fixed wait.
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                elsewhereMayCommit.resolve();
+                await elsewhere;
+                const response = await adjusted;
+
+                expect(response.body.result.isError).toBeUndefined();
+                const level = await connection
+                    .getRepository(adminCtx, StockLevel)
+                    .findOneOrFail({
+                        where: { productVariantId: variantId, stockLocationId: newLocationId },
+                    });
+                // Without the second read the call started from 0 and set the stock to 1, so the 3 were lost.
+                expect(level.stockOnHand).toBe(4);
+            } finally {
+                // Removing the location removes its stock levels, so they do not leak into later tests.
+                await adminClient.query(
+                    gql`
+                        mutation DeleteNewStockLocation($id: ID!) {
+                            deleteStockLocation(input: { id: $id }) {
+                                result
+                            }
+                        }
+                    `,
+                    { id: createStockLocation.id },
+                );
             }
         },
     );
