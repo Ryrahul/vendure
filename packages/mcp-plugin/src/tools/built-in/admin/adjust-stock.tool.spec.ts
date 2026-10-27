@@ -10,7 +10,9 @@ function build(location: unknown, levels: Array<{ stockLocationId: number; stock
     const productVariantService = { update } as any;
     const stockLevelService = {
         getLockedStockLevelsForVariant: () => Promise.resolve(levels),
-        getStockLevelsForVariant: () => Promise.resolve(levels),
+        // Only the response is built from the unlocked read, so it never holds the figure the delta is
+        // added to.
+        getStockLevelsForVariant: () => Promise.resolve([]),
     } as any;
     const stockLocationService = { findOne: () => Promise.resolve(location) } as any;
     const tool = new AdjustStockTool(
