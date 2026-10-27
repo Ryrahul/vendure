@@ -1,4 +1,4 @@
-import { LanguageCode, Permission } from '@vendure/common/lib/generated-types';
+import { GlobalFlag, LanguageCode, Permission } from '@vendure/common/lib/generated-types';
 import {
     Asset,
     AssetService,
@@ -7,8 +7,10 @@ import {
     DefaultAssetImportStrategy,
     DefaultEntityAccessControlStrategy,
     ID,
+    manualFulfillmentHandler,
     mergeConfig,
     Order,
+    OrderService,
     Payment,
     Product,
     ProductVariant,
@@ -116,6 +118,12 @@ async function startAssetFileServer(): Promise<{
         close: () =>
             new Promise((resolve, reject) => server.close(error => (error ? reject(error) : resolve()))),
     };
+}
+
+function deferred() {
+    let resolve!: () => void;
+    const promise = new Promise<void>(r => (resolve = r));
+    return { promise, resolve };
 }
 
 const SECOND_CHANNEL_CODE = 'admin-tools-second-channel';
@@ -1393,6 +1401,91 @@ describe('MCP built-in admin tools (direct mode)', () => {
             }
         }
     });
+
+    // #5652 — a fulfilment which commits while adjust_stock runs must not be overwritten by it. SQLite
+    // and SQL.js have no row locks and run one write transaction at a time, so this needs a real database.
+    it.skipIf(!process.env.DB || process.env.DB === 'sqljs')(
+        'adjust_stock keeps the sale of a fulfilment which commits while it runs',
+        async () => {
+            const token = await adminAccessToken();
+            const variants = connection.getRepository(adminCtx, ProductVariant);
+            const stockLevel = () =>
+                connection
+                    .getRepository(adminCtx, StockLevel)
+                    .findOneOrFail({ where: { productVariantId: variantId, stockLocationId } });
+            // The seeded variants do not track inventory, and a fulfilment of an untracked variant
+            // writes no sale, so there would be nothing for adjust_stock to overwrite.
+            await variants.update(variantId, { trackInventory: GlobalFlag.TRUE });
+            try {
+                const { graphqlId } = await createSettledOrder(2);
+                const lines = await orderLines(graphqlId);
+                const before = await stockLevel();
+
+                // The fulfilment writes its sale and then stays open, so adjust_stock starts while the
+                // sale is not yet committed.
+                const fulfilled = deferred();
+                const fulfilmentMayCommit = deferred();
+                const fulfilment = connection.withTransaction(
+                    await server.app.get(RequestContextService).create({ apiType: 'admin' }),
+                    async txCtx => {
+                        const result = await server.app.get(OrderService).createFulfillment(txCtx, {
+                            lines: lines.map(line => ({ orderLineId: line.id, quantity: line.quantity })),
+                            handler: {
+                                code: manualFulfillmentHandler.code,
+                                arguments: [
+                                    { name: 'method', value: 'Test Carrier' },
+                                    { name: 'trackingCode', value: '' },
+                                ],
+                            },
+                        });
+                        expect(result).toHaveProperty('id');
+                        fulfilled.resolve();
+                        await fulfilmentMayCommit.promise;
+                    },
+                );
+                await fulfilled.promise;
+
+                const adjusted = postMcp(
+                    baseUrl(),
+                    'admin',
+                    callTool(
+                        'adjust_stock',
+                        { variantId, locationId: stockLocationId, delta: 5, confirm: true },
+                        1,
+                    ),
+                    { token },
+                );
+                // There is no signal for "blocked inside the database", so a fixed wait gives the call
+                // time to reach its read of the stock level before the fulfilment commits.
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                fulfilmentMayCommit.resolve();
+                await fulfilment;
+                const response = await adjusted;
+
+                expect(response.body.result.isError).toBeUndefined();
+                const after = await stockLevel();
+                // The sale released the 2 allocated units, which shows the fulfilment really moved stock.
+                expect(after.stockAllocated).toBe(before.stockAllocated - 2);
+                // Without the locked read the call read the stock level from before the sale and wrote
+                // that figure plus 5, so the 2 units the fulfilment took came back.
+                expect(after.stockOnHand).toBe(before.stockOnHand - 2 + 5);
+
+                // Undo the adjustment, so the changed stock does not leak into later tests.
+                await postMcp(
+                    baseUrl(),
+                    'admin',
+                    callTool(
+                        'adjust_stock',
+                        { variantId, locationId: stockLocationId, delta: -5, confirm: true },
+                        2,
+                    ),
+                    { token },
+                );
+            } finally {
+                await variants.update(variantId, { trackInventory: GlobalFlag.FALSE });
+            }
+        },
+    );
 
     it('get_stock_levels refuses a variant that is not in the active channel', async () => {
         const token = await adminAccessToken();
