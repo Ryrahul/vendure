@@ -56,17 +56,19 @@ export class AdjustStockTool implements McpToolHandler<AdjustStockInput> {
     ) {}
 
     async execute(ctx: RequestContext, input: AdjustStockInput) {
-        // The locked stock read and the write below are not limited to the active channel, so we check
-        // the location here to avoid silently overwriting another channel's stock.
+        // The write sets an absolute stockOnHand, so the read must hold the row lock until the tool's
+        // transaction commits. Otherwise a concurrent adjustment would be overwritten. See #5652
+        // It comes before any other read: on MySQL and MariaDB the first plain read fixes the snapshot
+        // which core's write later looks the row up in, so that snapshot must not predate the lock.
+        let current = await this.findLockedStockLevel(ctx, input);
+        // The locked stock read above and the write below are not limited to the active channel, so we
+        // check the location here to avoid silently overwriting another channel's stock.
         const location = await this.stockLocationService.findOne(ctx, input.locationId);
         if (!location) {
             throw new UserInputError(
                 `Stock location ${input.locationId} is not available in the active channel.`,
             );
         }
-        // The write sets an absolute stockOnHand, so the read must hold the row lock until the tool's
-        // transaction commits. Otherwise a concurrent adjustment would be overwritten. See #5652
-        let current = await this.findLockedStockLevel(ctx, input);
         if (!current) {
             // On Postgres a locked read which waited for another transaction does not return a row that
             // transaction inserted, so the first stock at a location would be read as 0. A second read

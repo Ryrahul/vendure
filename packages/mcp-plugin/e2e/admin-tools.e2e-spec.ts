@@ -1489,8 +1489,9 @@ describe('MCP built-in admin tools (direct mode)', () => {
     );
 
     // #5652 — the first stock at a location has no StockLevel row to lock yet. On Postgres a locked read
-    // which waited does not return a row inserted while it waited, so a concurrent first adjustment at
-    // that location must still apply its delta to the figure the other one committed.
+    // which waited does not return a row inserted while it waited, and on MySQL and MariaDB core's write
+    // looks the row up in the transaction's snapshot. A concurrent first adjustment at that location must
+    // still apply its delta to the figure the other one committed.
     it.skipIf(!process.env.DB || process.env.DB === 'sqljs')(
         'adjust_stock keeps a concurrent first adjustment at a location without stock',
         async () => {
@@ -1548,7 +1549,8 @@ describe('MCP built-in admin tools (direct mode)', () => {
                     .findOneOrFail({
                         where: { productVariantId: variantId, stockLocationId: newLocationId },
                     });
-                // Without the second read the call started from 0 and set the stock to 1, so the 3 were lost.
+                // On Postgres the call otherwise started from 0 and set the stock to 1, losing the 3. On
+                // MySQL and MariaDB core otherwise tried to insert the row again and the call failed.
                 expect(level.stockOnHand).toBe(4);
             } finally {
                 // Removing the location removes its stock levels, so they do not leak into later tests.
